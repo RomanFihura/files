@@ -11,7 +11,7 @@ include(GoogleTest)
 
 enable_testing()
 
-set(SOURCES files.cpp)
+set(SOURCES filestringlist.cpp)
 
 set(APP_SOURCES ${SOURCES} main.cpp)
 set(TEST_SOURCES ${SOURCES} test_files.cpp)
