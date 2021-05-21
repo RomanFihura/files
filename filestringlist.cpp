@@ -1,8 +1,7 @@
 #include "filestring.h"
 
 #include <filesystem>
-#include <iterator>
-#include <memory>
+#include <memory> //unique_ptr
 
 constexpr uint32_t headerOffset = 0;
 
@@ -30,7 +29,7 @@ FileStringList::FileStringList(const std::string &filepath)
     }
 
     mDataFile.open(filepath, std::ios::binary | std::ios::in | std::ios::out);
-    if (mDataFile)
+    if (mDataFile) // reading header
     {
         readFromFile(mDataFile, headerOffset, (char *)&mHeader, sizeof(mHeader));
     }
@@ -166,7 +165,7 @@ bool FileStringList::createNew(const std::string &filepath)
     return file.good();
 }
 
-uint32_t FileStringList::getOffsetToReuse(uint32_t size)
+uint32_t FileStringList::getOffsetToReuse(uint32_t strSize)
 {
     uint32_t prevOffset = 0;
     uint32_t nextOffset = mHeader.deletedHeadOffset;
@@ -178,21 +177,21 @@ uint32_t FileStringList::getOffsetToReuse(uint32_t size)
     {
         readFromFile(mDataFile, nextOffset, (char *)&recordMeta, sizeof(recordMeta));
 
-        if (recordMeta.capacity <= size)
+        if (recordMeta.capacity <= strSize)
         {
             prevRecordMeta = recordMeta;
             prevOffset = nextOffset;
             nextOffset = recordMeta.nextOffset;
             continue;
         }
-        else if (prevOffset)
+        else if (prevOffset) // found place to reuse (not first)
         {
             prevRecordMeta.nextOffset = recordMeta.nextOffset;
             writeToFile(mDataFile, prevOffset, (const char *)&prevRecordMeta,
                         sizeof(prevRecordMeta));
             return nextOffset;
         }
-        else
+        else // found place to reuse (first)
         {
             mHeader.deletedHeadOffset = recordMeta.nextOffset;
             return nextOffset;
@@ -206,7 +205,7 @@ uint32_t FileStringList::addRecord(const std::string str)
 {
     uint32_t offset = getOffsetToReuse(str.size());
 
-    if (!offset)
+    if (!offset) // not found offset to reuse
     {
         mDataFile.seekp(0, std::ios::end);
         offset = mDataFile.tellp();
